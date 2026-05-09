@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code de la Route</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen active">
+      <div class="glass-card">
+        <h1>Code de la Route</h1>
+        <p>Sélectionnez une série pour commencer</p>
+        <div class="input-group">
+          <input type="number" id="series-input" placeholder="Numéro de la série (ex: 9)" min="1">
+          <button id="start-btn" class="primary-btn">Commencer le Test</button>
+        </div>
+        <div id="error-msg" class="error hidden">Série introuvable ou erreur de chargement.</div>
+      </div>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="screen hidden">
+      <div class="header">
+        <h2>Série <span id="current-series-display"></span></h2>
+        <div class="progress">Question <span id="question-number">1</span>/40</div>
+      </div>
+      
+      <div class="main-content">
+        <div class="image-container">
+          <img id="question-image" src="" alt="Question Image" onclick="openZoom()">
+          <div class="zoom-hint">Cliquez pour agrandir</div>
+        </div>
+
+        <div class="answers-container">
+          <h3>Choisissez vos réponses:</h3>
+          <div class="options">
+            <button class="option-btn" data-value="1">1</button>
+            <button class="option-btn" data-value="2">2</button>
+            <button class="option-btn" data-value="3">3</button>
+            <button class="option-btn" data-value="4">4</button>
+          </div>
+          <button id="next-btn" class="primary-btn">Valider & Suivant</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="screen hidden">
+      <div class="glass-card results-card">
+        <h2>Correction</h2>
+        <div class="score-display">Votre Score: <span id="final-score">0</span>/40</div>
+        
+        <div class="results-actions" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+          <button id="restart-btn" class="secondary-btn">Faire une autre série</button>
+          <button id="filter-btn" class="secondary-btn">Afficher uniquement les erreurs</button>
+        </div>
+        
+        <div id="correction-list" class="correction-list">
+          <!-- Correction items will be injected here -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Image Zoom Modal -->
+  <div id="image-modal" class="modal hidden">
+    <span class="close-modal" onclick="closeZoom()">&times;</span>
+    <img class="modal-content" id="zoomed-image">
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
