@@ -4,6 +4,7 @@ const quizScreen = document.getElementById('quiz-screen');
 const resultsScreen = document.getElementById('results-screen');
 const seriesInput = document.getElementById('series-input');
 const startBtn = document.getElementById('start-btn');
+const examBtn = document.getElementById('exam-btn');
 const errorMsg = document.getElementById('error-msg');
 
 const currentSeriesDisplay = document.getElementById('current-series-display');
@@ -15,6 +16,7 @@ const nextBtn = document.getElementById('next-btn');
 const finalScore = document.getElementById('final-score');
 const correctionList = document.getElementById('correction-list');
 const restartBtn = document.getElementById('restart-btn');
+const nextSeriesBtn = document.getElementById('next-series-btn');
 const filterBtn = document.getElementById('filter-btn');
 
 const imageModal = document.getElementById('image-modal');
@@ -29,8 +31,10 @@ let showingOnlyErrors = false;
 
 // Event Listeners
 startBtn.addEventListener('click', startSeries);
+examBtn.addEventListener('click', startRandomExam);
 nextBtn.addEventListener('click', handleNextQuestion);
 restartBtn.addEventListener('click', resetApp);
+if (nextSeriesBtn) nextSeriesBtn.addEventListener('click', startNextSeries);
 filterBtn.addEventListener('click', toggleFilter);
 
 optionBtns.forEach(btn => {
@@ -40,6 +44,32 @@ optionBtns.forEach(btn => {
 seriesInput.addEventListener('keypress', function (e) {
   if (e.key === 'Enter') {
     startSeries();
+  }
+});
+
+// Raccourcis clavier (Zoom et Quiz)
+document.addEventListener('keyup', function (e) {
+  // Raccourcis globaux pour l'image
+  if (e.key === 'Escape') {
+    closeZoom();
+  } else if (e.key === '²' || e.code === 'Backquote') {
+    if (imageModal.classList.contains('hidden')) {
+      if (quizScreen.classList.contains('active')) {
+        openZoom();
+      }
+    } else {
+      closeZoom();
+    }
+  }
+
+  // Raccourcis spécifiques au quiz
+  if (!quizScreen.classList.contains('active')) return;
+  switch (e.code) {
+    case 'Digit1': case 'Numpad1': toggleOption(1); break;
+    case 'Digit2': case 'Numpad2': toggleOption(2); break;
+    case 'Digit3': case 'Numpad3': toggleOption(3); break;
+    case 'Digit4': case 'Numpad4': toggleOption(4); break;
+    case 'Enter': case 'NumpadEnter': handleNextQuestion(); break;
   }
 });
 
@@ -73,6 +103,69 @@ async function startSeries() {
   }
 }
 
+async function startRandomExam() {
+  errorMsg.classList.add('hidden');
+  examBtn.textContent = 'Chargement...';
+  examBtn.disabled = true;
+
+  try {
+    let allQuestions = [];
+    const maxFoldersToCheck = 50; // Check folders from 1 to 50
+    const fetchPromises = [];
+
+    // Parallel fetch to discover available series and get their data
+    for (let i = 1; i <= maxFoldersToCheck; i++) {
+      fetchPromises.push(
+        fetch(`${i}/series.json`)
+          .then(async response => {
+            if (response.ok) {
+              const data = await response.json();
+              return data.questions.map(q => ({
+                ...q,
+                folderNumber: i.toString()
+              }));
+            }
+            return null;
+          })
+          .catch(() => null)
+      );
+    }
+
+    const results = await Promise.all(fetchPromises);
+
+    for (const questions of results) {
+      if (questions) {
+        allQuestions = allQuestions.concat(questions);
+      }
+    }
+
+    if (allQuestions.length === 0) throw new Error('No questions found');
+
+    // Shuffle the questions array
+    for (let i = allQuestions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+    }
+
+    // Select the first 40 questions
+    const selectedQuestions = allQuestions.slice(0, 40);
+
+    currentSeriesData = {
+      number: 'Blanc (Aléatoire)',
+      questions: selectedQuestions,
+      isRandom: true
+    };
+
+    initQuiz();
+  } catch (error) {
+    errorMsg.classList.remove('hidden');
+    errorMsg.textContent = "Erreur lors du chargement de l'examen blanc.";
+  } finally {
+    examBtn.textContent = 'Examen Blanc (40 Q. Aléatoires)';
+    examBtn.disabled = false;
+  }
+}
+
 function initQuiz() {
   userAnswers = [];
   currentQuestionIndex = 0;
@@ -101,12 +194,16 @@ function loadQuestion() {
   questionNumber.textContent = currentQuestionIndex + 1;
 
   // Some json might have 'photoUri' like 'photos/q01.jpg'
-  // We prepend the folder number to make it relative to root
-  const imgPath = `${currentSeriesData.folderNumber}/${question.photoUri}`;
+  // Use question.folderNumber if available (for random exam), else fallback to series folder
+  const folder = question.folderNumber || currentSeriesData.folderNumber;
+  const imgPath = `${folder}/${question.photoUri}`;
   questionImage.src = imgPath;
 
   // Reset buttons
   optionBtns.forEach(btn => btn.classList.remove('selected'));
+  nextBtn.disabled = true;
+  nextBtn.style.opacity = '0.5';
+  nextBtn.style.cursor = 'not-allowed';
 }
 
 function toggleOption(value) {
@@ -121,11 +218,22 @@ function toggleOption(value) {
   }
 
   currentSelection.sort((a, b) => a - b);
+
+  // Enable/disable next button
+  if (currentSelection.length > 0) {
+    nextBtn.disabled = false;
+    nextBtn.style.opacity = '1';
+    nextBtn.style.cursor = 'pointer';
+  } else {
+    nextBtn.disabled = true;
+    nextBtn.style.opacity = '0.5';
+    nextBtn.style.cursor = 'not-allowed';
+  }
 }
 
 function handleNextQuestion() {
-  // If user selected nothing, we can either block them or assume empty array.
-  // Assuming empty array is fine.
+  if (currentSelection.length === 0) return; // Empêcher de passer si aucune réponse
+
   userAnswers.push([...currentSelection]);
 
   currentQuestionIndex++;
@@ -140,6 +248,28 @@ function showResults() {
   resultsScreen.classList.add('active');
 
   calculateAndRenderCorrection();
+
+  if (currentSeriesData && !currentSeriesData.isRandom && currentSeriesData.folderNumber && !isNaN(parseInt(currentSeriesData.folderNumber))) {
+    if (nextSeriesBtn) {
+      nextSeriesBtn.classList.remove('hidden');
+      nextSeriesBtn.style.display = 'inline-block';
+      nextSeriesBtn.textContent = `Série suivante (${parseInt(currentSeriesData.folderNumber) + 1})`;
+    }
+  } else {
+    if (nextSeriesBtn) {
+      nextSeriesBtn.classList.add('hidden');
+      nextSeriesBtn.style.display = 'none';
+    }
+  }
+}
+
+function startNextSeries() {
+  if (currentSeriesData && currentSeriesData.folderNumber) {
+    const nextNum = parseInt(currentSeriesData.folderNumber) + 1;
+    seriesInput.value = nextNum;
+    resetApp();
+    startSeries();
+  }
 }
 
 function calculateAndRenderCorrection() {
@@ -148,26 +278,27 @@ function calculateAndRenderCorrection() {
 
   // Process up to 40 questions
   const totalQuestions = Math.min(currentSeriesData.questions.length, 40);
-  
+
   for (let i = 0; i < totalQuestions; i++) {
     const question = currentSeriesData.questions[i];
     const userAns = userAnswers[i] || [];
     const correctAns = question.correct || []; // Use 'correct' based on user request
-    
+
     // Sort both arrays to compare
     const sortedUserAns = [...userAns].sort();
     const sortedCorrectAns = [...correctAns].sort();
-    
+
     const isCorrect = JSON.stringify(sortedUserAns) === JSON.stringify(sortedCorrectAns);
-    
+
     if (isCorrect) score++;
-    
+
     // Create correction item UI
     const item = document.createElement('div');
     item.className = `correction-item ${isCorrect ? 'correct' : 'wrong'}`;
-    
-    const imgPath = `${currentSeriesData.folderNumber}/${question.photoUri}`;
-    
+
+    const folder = question.folderNumber || currentSeriesData.folderNumber;
+    const imgPath = `${folder}/${question.photoUri}`;
+
     // Using loading="lazy" to fix page slowness
     item.innerHTML = `
       <img src="${imgPath}" alt="Q${i + 1}" loading="lazy" onclick="openZoomFromSrc('${imgPath}')">
@@ -179,7 +310,7 @@ function calculateAndRenderCorrection() {
         ${!isCorrect ? `<p>Réponses exactes: <strong>${correctAns.join(', ')}</strong></p>` : ''}
       </div>
     `;
-    
+
     correctionList.appendChild(item);
   }
 
@@ -196,6 +327,8 @@ function resetApp() {
   seriesInput.value = '';
   startBtn.textContent = 'Commencer le Test';
   startBtn.disabled = false;
+  examBtn.textContent = 'Examen Blanc (40 Q. Aléatoires)';
+  examBtn.disabled = false;
   showingOnlyErrors = false;
   filterBtn.textContent = 'Afficher uniquement les erreurs';
 }
@@ -203,7 +336,7 @@ function resetApp() {
 function toggleFilter() {
   showingOnlyErrors = !showingOnlyErrors;
   const items = document.querySelectorAll('.correction-item');
-  
+
   if (showingOnlyErrors) {
     filterBtn.textContent = 'Afficher toutes les questions';
     items.forEach(item => {
@@ -255,7 +388,7 @@ zoomedImage.addEventListener('click', function (e) {
     const rect = zoomedImage.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
     zoomedImage.style.transformOrigin = `${x}% ${y}%`;
     zoomedImage.style.transform = `scale(${ZOOM_FACTOR})`;
     zoomedImage.style.cursor = 'zoom-out';
@@ -264,7 +397,7 @@ zoomedImage.addEventListener('click', function (e) {
 });
 
 // Double click to unzoom as well just in case
-zoomedImage.addEventListener('dblclick', function(e) {
+zoomedImage.addEventListener('dblclick', function (e) {
   resetZoomState();
 });
 

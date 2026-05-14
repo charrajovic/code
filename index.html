@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <div class="app-container">
-    
+
     <!-- Home Screen -->
     <div id="home-screen" class="screen active">
       <div class="glass-card">
@@ -19,6 +21,8 @@
           <input type="number" id="series-input" placeholder="Numéro de la série (ex: 9)" min="1">
           <button id="start-btn" class="primary-btn">Commencer le Test</button>
         </div>
+        <button id="exam-btn" class="primary-btn"
+          style="margin-top: 15px; width: 100%; background-color: #2a2a72;">Examen Blanc (40 Q. Aléatoires)</button>
         <div id="error-msg" class="error hidden">Série introuvable ou erreur de chargement.</div>
       </div>
     </div>
@@ -29,7 +33,7 @@
         <h2>Série <span id="current-series-display"></span></h2>
         <div class="progress">Question <span id="question-number">1</span>/40</div>
       </div>
-      
+
       <div class="main-content">
         <div class="image-container">
           <img id="question-image" src="" alt="Question Image" onclick="openZoom()">
@@ -54,12 +58,14 @@
       <div class="glass-card results-card">
         <h2>Correction</h2>
         <div class="score-display">Votre Score: <span id="final-score">0</span>/40</div>
-        
-        <div class="results-actions" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px;">
+
+        <div class="results-actions"
+          style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
           <button id="restart-btn" class="secondary-btn">Faire une autre série</button>
+          <button id="next-series-btn" class="primary-btn hidden" style="display: none;">Série suivante</button>
           <button id="filter-btn" class="secondary-btn">Afficher uniquement les erreurs</button>
         </div>
-        
+
         <div id="correction-list" class="correction-list">
           <!-- Correction items will be injected here -->
         </div>
@@ -74,6 +80,7 @@
     <img class="modal-content" id="zoomed-image">
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=2"></script>
 </body>
+
 </html>
